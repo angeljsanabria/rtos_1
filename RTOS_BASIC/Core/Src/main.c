@@ -29,7 +29,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
+#include "logger.h"
+#include "dwt.h"
+/* Application includes. */
+#include "app.h"
 #include "bsp_leds.h"
 /* USER CODE END Includes */
 
@@ -94,7 +97,9 @@ void LED3Task(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#if (1 == LOGGER_CONFIG_USE_SEMIHOSTING)
 extern void initialise_monitor_handles(void);
+#endif
 /* USER CODE BEGIN Header_LED3Task */
 /**
   * @brief  FreeRTOS Task: Blink LED3 every 1000ms
@@ -150,7 +155,9 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-	initialise_monitor_handles();
+	#if (1 == LOGGER_CONFIG_USE_SEMIHOSTING)
+		initialise_monitor_handles();
+	#endif
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -177,6 +184,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
   /* Initialize Board Support Package (LEDs) */
   BSP_LED_Init();
+  /* add application, ... */
+  app_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -196,6 +205,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+	#ifdef _defaultTask_
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -203,6 +213,7 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+	#endif
   /* creation of LED2Task */
   LED2TaskHandle = osThreadNew(LED2Task, NULL, &LED2Task_attributes);
   /* creation of LED3Task */
