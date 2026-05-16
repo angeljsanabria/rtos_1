@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# zip files
+**/*.zip
+
 # STM32CubeIDE / Eclipse build outputs
 **/Debug/
 **/Release/
