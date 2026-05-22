@@ -44,8 +44,8 @@
 /* Application & Tasks includes */
 #include "board.h"
 #include "app_it.h"
-#include "task_a.h"
-#include "task_b.h"
+#include "task_btn.h"
+#include "task_led.h"
 
 /********************** macros and definitions *******************************/
 #define G_APP_CNT_INI					0ul
@@ -60,7 +60,7 @@
 
 /********************** internal data definition *****************************/
 const char *p_app	= "RTOS - Event-Triggered Systems (ETS)";
-const char *p_app_	= "sotri-tp0_03-application: Demo Code";
+const char *p_app_	= "seo-tp1_01-application: Demo Code";
 const char *p_app__	= "(Source => CESE - Sistemas Operativos de Tiempo Real)";
 
 /********************** external data declaration ****************************/
@@ -77,8 +77,8 @@ uint32_t g_app_stack_overflow_cnt;
  * with other thread or to ensure mutual exclusive access to...*/
 
 /* Declare a variable of type TaskHandle_t. This is used to reference threads. */
-TaskHandle_t h_task_a;
-TaskHandle_t h_task_b;
+TaskHandle_t h_task_btn;
+TaskHandle_t h_task_led;
 
 /********************** external functions definition ************************/
 void app_init(void)
@@ -109,24 +109,24 @@ void app_init(void)
 	/* Add threads, ... */
     BaseType_t ret;
 
-    /* Task A thread at priority 1 */
-    ret = xTaskCreate(task_a,							/* Pointer to the function thats implement the task. */
-					  "Task A",							/* Text name for the task. This is to facilitate debugging only. */
+    /* Task BTN thread at priority 1 */
+    ret = xTaskCreate(task_btn,							/* Pointer to the function thats implement the task. */
+					  "Task BTN",						/* Text name for the task. This is to facilitate debugging only. */
 					  (2 * configMINIMAL_STACK_SIZE),	/* Stack depth in words. */
 					  NULL,								/* We are not using the task parameter. */
 					  (tskIDLE_PRIORITY + 1ul),			/* This task will run at priority 1. */
-					  &h_task_a);						/* We are using a variable as task handle. */
+					  &h_task_btn);						/* We are using a variable as task handle. */
 
     /* Check the thread was created successfully. */
     configASSERT(pdPASS == ret);
 
-    /* Task B thread at priority 1 */
-    ret = xTaskCreate(task_b,							/* Pointer to the function thats implement the task. */
-					  "Task B",							/* Text name for the task. This is to facilitate debugging only. */
+    /* Task LED thread at priority 1 */
+    ret = xTaskCreate(task_led,							/* Pointer to the function thats implement the task. */
+					  "Task LED",						/* Text name for the task. This is to facilitate debugging only. */
 					  (2 * configMINIMAL_STACK_SIZE),	/* Stack depth in words. */
 					  NULL,								/* We are not using the task parameter. */
 					  (tskIDLE_PRIORITY + 1ul),			/* This task will run at priority 1. */
-					  &h_task_b);						/* We are using a variable as task handle. */
+					  &h_task_led);						/* We are using a variable as task handle. */
 
     /* Check the thread was created successfully. */
     configASSERT(pdPASS == ret);
@@ -141,7 +141,11 @@ void app_init(void)
      * one task in this state at the moment), but the currently run task ID
      * is stored in variable pxCurrentTCB */
 
-    cycle_counter_init();
+  	/* Application Interrupts Init */
+	app_it_init();
+
+	/* Init Cycle Counter */
+	cycle_counter_init();
 }
 
 /********************** end of file ******************************************/
