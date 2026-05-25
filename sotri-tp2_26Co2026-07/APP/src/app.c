@@ -46,6 +46,7 @@
 #include "app_it.h"
 #include "task_btn.h"
 #include "task_led.h"
+#include "task_led_attribute.h"
 
 /********************** macros and definitions *******************************/
 #define G_APP_CNT_INI					0ul
@@ -60,7 +61,7 @@
 
 /********************** internal data definition *****************************/
 const char *p_app	= "RTOS - Event-Triggered Systems (ETS)";
-const char *p_app_	= "seo-tp1_01-application: Demo Code";
+const char *p_app_	= "seo-tp2_01-application: Demo Code";
 const char *p_app__	= "(Source => CESE - Sistemas Operativos de Tiempo Real)";
 
 /********************** external data declaration ****************************/
@@ -71,10 +72,12 @@ uint32_t g_task_idle_cnt;
 uint32_t g_app_stack_overflow_cnt;
 
 /* Declare a variable of type QueueHandle_t. This is used to reference queues*/
+QueueHandle_t h_btn_led_q;
 
-/* Declare a variable of type xSemaphoreHandle (binary or counting) or mutex. 
+/* Declare a variable of type SemaphoreHandle_t (binary or counting) or mutex.
  * This is used to reference the semaphore that is used to synchronize a thread
  * with other thread or to ensure mutual exclusive access to...*/
+SemaphoreHandle_t h_btn_led_bin_sem;
 
 /* Declare a variable of type TaskHandle_t. This is used to reference threads. */
 TaskHandle_t h_task_btn;
@@ -99,12 +102,24 @@ void app_init(void)
 	LOGGER_INFO(" %s is a %s", GET_NAME(app), p_app__);
 
     /* Before a queue or semaphore (binary or counting) or mutex is used it must 
-     * be explicitly created */
+     * be explicitly created.
+	 *
+	 * Check the queue or semaphore (binary or counting) or mutex was created
+     * successfully.
+     *
+     * Add queue or semaphore (binary or counting) or mutex to registry. */
 
-    /* Check the queue or semaphore (binary or counting) or mutex was created 
-     * successfully. */
+	/* The queue is created to hold a maximum of 5 task_led_ev_t values. */
+	h_btn_led_q = xQueueCreate(5, sizeof(task_led_ev_t));
+	configASSERT(NULL != h_btn_led_q);
+	vQueueAddToRegistry(h_btn_led_q, "BTN to LED Queue Handle");
 
-    /* Add queue or semaphore (binary or counting) or mutex to registry. */
+	/* The semaphore is created in the 'empty' state, meaning the semaphore
+	 * must first be given using the xSemaphoreGive() API function before it can
+	 * subsequently be taken (obtained) using the xSemaphoreTake() function */
+	h_btn_led_bin_sem = xSemaphoreCreateBinary();
+	configASSERT(NULL != h_btn_led_bin_sem);
+	vQueueAddToRegistry(h_btn_led_bin_sem, "BTN to LED Binary Semaphore Handle");
 
 	/* Add threads, ... */
     BaseType_t ret;

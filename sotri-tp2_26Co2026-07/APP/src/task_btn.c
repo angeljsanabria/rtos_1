@@ -58,6 +58,9 @@
 #define EV_SYS_IDLE			0ul
 #define EV_SYS_LOOP_DET		1ul
 
+#define BTN_TICK_DEL_ZERO	(pdMS_TO_TICKS(0ul))
+#define BTN_TICK_DEL_MAX	(pdMS_TO_TICKS(50ul))
+
 /********************** internal data declaration ****************************/
 task_btn_dta_t task_btn_dta = {
 		EV_BTN_UP, ST_BTN_UP, DEL_BTN_MIN,
@@ -91,6 +94,9 @@ void task_btn(void *parameters)
 		
 		/* Run Task Statechart */
     	task_btn_statechart();
+
+    	/* We want this task to execute every 50 milliseconds. */
+		vTaskDelay(BTN_TICK_DEL_MAX);
 	}
 }
 

@@ -55,8 +55,9 @@ extern "C" {
 #define NUCLEO_F767ZI		(7)
 #define STM32F407G_DISC1	(8)
 #define STM32F429I_DISC1	(9)
+#define NUCLEO_L4R5ZI		(10)
 
-#define BOARD (NUCLEO_F103RC)
+#define BOARD (NUCLEO_L4R5ZI)
 
 /* STM32 Nucleo Boards - 32 Pins */
 #if (BOARD == NUCLEO_F303K8)
@@ -96,6 +97,27 @@ extern "C" {
 #define LED_A_PORT		LD1_GPIO_Port
 #define LED_A_ON		GPIO_PIN_SET
 #define LED_A_OFF		GPIO_PIN_RESET
+
+#endif
+
+/* STM32 Nucleo Boards - NUCLEO-L4R5ZI (144 Pins, B1 en PC13 activo en alto) */
+#if (BOARD == NUCLEO_L4R5ZI)
+
+#define BTN_A_PIN		B1_Pin
+#define BTN_A_PORT		B1_GPIO_Port
+#define BTN_A_PRESSED	GPIO_PIN_SET
+#define BTN_A_HOVER		GPIO_PIN_RESET
+
+#define BTN_PRESSED		BTN_A_PRESSED
+#define BTN_HOVER		BTN_A_HOVER
+
+#define LED_A_PIN		LD2_Pin
+#define LED_A_PORT		LD2_GPIO_Port
+#define LED_A_ON		GPIO_PIN_SET
+#define LED_A_OFF		GPIO_PIN_RESET
+
+#define LED_ON			LED_A_ON
+#define LED_OFF			LED_A_OFF
 
 #endif
 

@@ -64,4 +64,18 @@ void app_it_init(void)
 	__asm("CPSIE i");	/* enable interrupts */
 }
 
+/**
+  * @brief  EXTI line detection callbacks.
+  * @param  GPIO_Pin Specifies the pins connected EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	// Check which version of the gpio triggered this callback
+	if (GPIO_Pin == BTN_A_PIN)
+	{
+		/* Work to be done. */
+	}
+}
+
 /********************** end of file ******************************************/

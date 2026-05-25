@@ -53,6 +53,9 @@
 #define DEL_LED_MED			250ul
 #define DEL_LED_MAX			500ul
 
+#define LED_TICK_DEL_ZERO	(pdMS_TO_TICKS(0ul))
+#define LED_TICK_DEL_MAX	(pdMS_TO_TICKS(50ul))
+
 /********************** internal data declaration ****************************/
 task_led_dta_t task_led_dta = {
 		false, EV_LED_OFF, ST_LED_OFF, DEL_LED_MIN,
@@ -73,6 +76,12 @@ void task_led(void *parameters)
 {
 	/*  Declare & Initialize Task Function variables */
 	g_task_led_cnt = G_TASK_LED_CNT_INI;
+	
+	TickType_t last_wake_time;
+
+	/* The xLastWakeTime variable needs to be initialized with the current tick
+	   count. ws*/
+	last_wake_time = xTaskGetTickCount();
 
 	/* Print out: Task Initialized */
 	LOGGER_INFO(" ");
@@ -88,6 +97,9 @@ void task_led(void *parameters)
 
 		/* Run Task Statechart */
     	task_led_statechart();
+
+    	/* We want this task to execute exactly every 50 milliseconds. */
+		vTaskDelayUntil(&last_wake_time, LED_TICK_DEL_MAX);
 	}
 }
 
