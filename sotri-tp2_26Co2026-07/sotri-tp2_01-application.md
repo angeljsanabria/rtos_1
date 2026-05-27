@@ -375,3 +375,442 @@ Para confirmar este analisis en STM32CubeIDE:
 ---
 
 *Seccion 1 — Actividad TP2-01, Paso 06. Proyecto: `sotri-tp2_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
+
+---
+
+## 2) Analisis y explicacion del codigo fuente de aplicacion (APP)
+
+> **Archivos analizados** (Paso 08 de la guia):
+>
+>
+> | Archivo guia           | Ruta en el proyecto            |
+> | ---------------------- | ------------------------------ |
+> | `app.c`                | `APP/src/app.c`                |
+> | `app_it.c`             | `APP/src/app_it.c`             |
+> | `task_btn.c`           | `APP/src/task_btn.c`           |
+> | `task_led.c`           | `APP/src/task_led.c`           |
+> | `task_led_interface.c` | `APP/src/task_led_interface.c` |
+> | `freertos.c`           | `APP/src/freertos.c`           |
+>
+>
+> **Nota:** existe tambien `Core/Src/freertos.c` con stubs debiles de CubeMX. Las implementaciones **activas** de hooks estan en `APP/src/freertos.c` (sobreescriben los stubs).
+
+---
+
+### 2.1 Vision general: sistema orientado a eventos (ETS)
+
+El demo implementa un **Event-Triggered System** con dos tareas FreeRTOS de igual prioridad:
+
+```text
+                    +------------------+
+                    |     app_init     |
+                    | cola + sem +     |
+                    | task_btn/led     |
+                    +--------+---------+
+                             |
+              +--------------+--------------+
+              |                             |
+       +------v------+               +------v------+
+       |  task_btn   |  evento     |  task_led   |
+       |  (prod.)    +------------>|  (cons.)    |
+       |  polling    | put_event   |  GPIO LED   |
+       +-------------+             +-------------+
+              ^                             |
+              |                             v
+         HAL_GPIO_ReadPin              LD2 ON/OFF/BLINK
+         cada 50 ms
+```
+
+**Comportamiento funcional verificado:**
+
+
+| Accion usuario                     | Evento generado | Efecto en LED                          |
+| ---------------------------------- | --------------- | -------------------------------------- |
+| Boton libre                        | —               | LED apagado (`ST_LED_OFF`)             |
+| Boton presionado estable (≥ 50 ms) | `EV_LED_BLINK`  | Entra en parpadeo (toggle cada 500 ms) |
+| Boton soltado estable (≥ 50 ms)    | `EV_LED_OFF`    | LED apagado                            |
+
+
+Secuencia tipica en UART:
+
+```text
+Task BTN - BTN PRESSED  →  Task LED - LED BLINK
+Task BTN - BTN HOVER    →  Task LED - LED OFF
+```
+
+---
+
+### 2.2 `app.c` — inicializacion de la aplicacion
+
+#### Rol
+
+Punto de entrada de la capa APP. Es llamado desde `main()` **antes** de `osKernelStart()`. Centraliza creacion de primitivas RTOS, tareas y servicios auxiliares.
+
+#### Variables globales
+
+
+| Variable                         | Tipo                | Proposito                                                     |
+| -------------------------------- | ------------------- | ------------------------------------------------------------- |
+| `g_app_cnt`, `g_app_task_cnt`, … | `uint32_t`          | Contadores de observabilidad / debug                          |
+| `h_btn_led_q`                    | `QueueHandle_t`     | Cola BTN→LED (5 x `task_led_ev_t`) — **creada, no usada aun** |
+| `h_btn_led_bin_sem`              | `SemaphoreHandle_t` | Semaforo binario — **creado, no usado aun**                   |
+| `h_task_btn`, `h_task_led`       | `TaskHandle_t`      | Handles para depuracion o borrado futuro                      |
+
+
+#### Secuencia de `app_init()`
+
+```text
+app_init()
+  ├─ Inicializa contadores globales a 0
+  ├─ LOGGER_INFO: banner ETS / TP2
+  ├─ xQueueCreate(5, sizeof(task_led_ev_t))  → h_btn_led_q
+  ├─ vQueueAddToRegistry(...)                  → debug/trace
+  ├─ xSemaphoreCreateBinary()                → h_btn_led_bin_sem
+  ├─ vQueueAddToRegistry(...)
+  ├─ xTaskCreate(task_btn, "Task BTN", prio 1, &h_task_btn)
+  ├─ xTaskCreate(task_led, "Task LED", prio 1, &h_task_led)
+  ├─ xPortGetFreeHeapSize()                  → heap restante
+  ├─ app_it_init()
+  └─ cycle_counter_init()                    → DWT para mediciones
+```
+
+#### Parametros de creacion de tareas
+
+Ambas tareas comparten configuracion simetrica:
+
+
+| Parametro | Valor                                         | Significado                        |
+| --------- | --------------------------------------------- | ---------------------------------- |
+| Stack     | `2 * configMINIMAL_STACK_SIZE` (256 palabras) | Pila por tarea                     |
+| Prioridad | `tskIDLE_PRIORITY + 1` (= 1)                  | Mayor que Idle (0), igual entre si |
+| Parametro | `NULL`                                        | Sin argumento al handler           |
+
+
+`configASSERT` verifica creacion exitosa de cola, semaforo y tareas.
+
+#### Estado respecto a actividades futuras del TP2
+
+La cola y el semaforo estan **preparados** para TP2-02 (cola) y TP2-03/04 (semaforo), pero en TP2-01 la comunicacion real va por `put_event_task_led()` (memoria compartida). Esto es intencional del material del curso.
+
+---
+
+### 2.3 `app_it.c` — interrupciones de aplicacion
+
+#### Rol
+
+Capa de callbacks de interrupcion entre HAL (`stm32l4xx_it.c`) y logica de aplicacion.
+
+#### `app_it_init()`
+
+```c
+__asm("CPSID i");   /* deshabilita IRQ globalmente */
+__asm("CPSIE i");   /* habilita IRQ globalmente */
+```
+
+Bloque placeholder: deshabilita y rehabilita interrupciones sin configuracion adicional. La EXTI del boton ya fue configurada en `MX_GPIO_Init()` (Core).
+
+#### `HAL_GPIO_EXTI_Callback()`
+
+Invocado desde la cadena:
+
+```text
+EXTI15_10_IRQHandler → HAL_GPIO_EXTI_IRQHandler(B1_Pin) → HAL_GPIO_EXTI_Callback
+```
+
+Estado actual:
+
+```c
+if (GPIO_Pin == BTN_A_PIN)  /* BTN_A_PIN == B1_Pin en NUCLEO_L4R5ZI */
+{
+    /* Work to be done. */
+}
+```
+
+**El callback esta vacio.** El boton se atiende por **polling** en `task_btn` (`HAL_GPIO_ReadPin`), no por ISR. La EXTI esta cableada en hardware y NVIC habilitado, pero la logica de TP2-04 (ISR + semaforo hacia `task_btn`) aun no se implemento.
+
+---
+
+### 2.4 `task_btn.c` — tarea productora del boton
+
+#### Rol
+
+Lee el boton B1 periodicamente, aplica **antirrebote** con maquina de estados y notifica eventos al LED.
+
+#### Estructura de datos (`task_btn_dta_t`)
+
+Inicializada con:
+
+- Estado inicial: `ST_BTN_UP`
+- Evento inicial: `EV_BTN_UP`
+- GPIO: `B1_GPIO_Port`, `B1_Pin` (PC13 en NUCLEO-L4R5ZI)
+
+#### Loop principal
+
+```c
+for (;;)
+{
+    g_task_btn_cnt++;
+    task_btn_statechart();
+    vTaskDelay(BTN_TICK_DEL_MAX);   /* 50 ms — delay relativo */
+}
+```
+
+Usa `**vTaskDelay**` (relativo): la tarea cede CPU al scheduler durante 50 ms.
+
+#### Maquina de estados (antirrebote)
+
+```mermaid
+stateDiagram-v2
+    [*] --> ST_BTN_UP
+    ST_BTN_UP --> ST_BTN_FALLING : EV_BTN_DOWN
+    ST_BTN_FALLING --> ST_BTN_DOWN : 50ms y sigue DOWN\n→ put_event(BLINK)
+    ST_BTN_FALLING --> ST_BTN_UP : 50ms y volvio UP
+    ST_BTN_DOWN --> ST_BTN_RISING : EV_BTN_UP
+    ST_BTN_RISING --> ST_BTN_UP : 50ms y sigue UP\n→ put_event(OFF)
+    ST_BTN_RISING --> ST_BTN_DOWN : 50ms y volvio DOWN
+```
+
+
+
+
+| Estado           | Accion clave                                                       |
+| ---------------- | ------------------------------------------------------------------ |
+| `ST_BTN_UP`      | Espera flanco a presionado                                         |
+| `ST_BTN_FALLING` | Espera 50 ms (`DEL_BTN_MAX`); si sigue presionado → `EV_LED_BLINK` |
+| `ST_BTN_DOWN`    | Espera flanco a liberado                                           |
+| `ST_BTN_RISING`  | Espera 50 ms; si sigue libre → `EV_LED_OFF` (log "BTN HOVER")      |
+
+
+#### Lectura del boton
+
+```c
+if (BTN_PRESSED == HAL_GPIO_ReadPin(...))
+    task_btn_dta.event = EV_BTN_DOWN;
+else
+    task_btn_dta.event = EV_BTN_UP;
+```
+
+`BTN_PRESSED` se define en `board.h` segun placa (en L4R5ZI: activo alto, `GPIO_PIN_SET`).
+
+#### Comunicacion hacia LED
+
+Llama `put_event_task_led(EV_LED_BLINK)` o `put_event_task_led(EV_LED_OFF)`. **No usa** `h_btn_led_q` ni `h_btn_led_bin_sem`.
+
+---
+
+### 2.5 `task_led_interface.c` — interfaz de comunicacion entre tareas
+
+#### Rol
+
+Abstrae el mecanismo BTN → LED. En TP2-01 es el unico punto por donde `task_btn` escribe eventos para `task_led`.
+
+#### Implementacion
+
+```c
+void put_event_task_led(task_led_ev_t event)
+{
+    task_led_dta.event = event;
+    task_led_dta.flag = true;
+}
+```
+
+Patron **memoria compartida + flag de evento pendiente**:
+
+- `task_btn` escribe (productor).
+- `task_led` lee en su statechart (consumidor).
+- No hay mutex, cola ni semaforo: valido para demo simple (un productor, un consumidor, misma prioridad, eventos espaciados por debounce).
+
+#### Tipos de evento (`task_led_attribute.h`)
+
+```c
+typedef enum task_led_ev { EV_LED_OFF, EV_LED_BLINK } task_led_ev_t;
+typedef enum task_led_st { ST_LED_OFF, ST_LED_BLINK } task_led_st_t;
+```
+
+---
+
+### 2.6 `task_led.c` — tarea consumidora del LED
+
+#### Rol
+
+Consume eventos de `task_led_dta`, controla GPIO del LED (LD2) y ejecuta parpadeo temporal.
+
+#### Estructura inicial (`task_led_dta_t`)
+
+```c
+{ false, EV_LED_OFF, ST_LED_OFF, DEL_LED_MIN, LD2_GPIO_Port, LD2_Pin }
+```
+
+LED apagado al arrancar; en `task_led()` se fuerza `LED_OFF` con `HAL_GPIO_WritePin` antes del loop.
+
+#### Loop principal
+
+```c
+last_wake_time = xTaskGetTickCount();
+for (;;)
+{
+    g_task_led_cnt++;
+    task_led_statechart();
+    vTaskDelayUntil(&last_wake_time, LED_TICK_DEL_MAX);  /* 50 ms exactos */
+}
+```
+
+Usa `**vTaskDelayUntil**` (absoluto): periodo estable de 50 ms sin acumular jitter (requiere `INCLUDE_vTaskDelayUntil = 1` en `FreeRTOSConfig.h`).
+
+#### Maquina de estados LED
+
+```mermaid
+stateDiagram-v2
+    [*] --> ST_LED_OFF
+    ST_LED_OFF --> ST_LED_BLINK : flag && EV_LED_BLINK\nencender LED
+    ST_LED_BLINK --> ST_LED_OFF : flag && EV_LED_OFF\napagar LED
+    ST_LED_BLINK --> ST_LED_BLINK : cada 500ms toggle pin
+```
+
+
+
+
+| Estado         | Comportamiento                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------- |
+| `ST_LED_OFF`   | Si `flag==true` y `event==EV_LED_BLINK` → enciende LED, pasa a BLINK, limpia flag           |
+| `ST_LED_BLINK` | Si llega `EV_LED_OFF` → apaga y vuelve a OFF; si no, toggle cada **500 ms** (`DEL_LED_MAX`) |
+| `default`      | Recuperacion: fuerza OFF                                                                    |
+
+
+#### Temporizacion del parpadeo
+
+En `ST_LED_BLINK`, cada 500 ms:
+
+```c
+if (DEL_LED_MAX <= (xTaskGetTickCount() - task_led_dta.tick))
+{
+    task_led_dta.tick = xTaskGetTickCount();
+    HAL_GPIO_TogglePin(...);
+}
+```
+
+La tarea corre cada 50 ms pero el toggle ocurre cada 500 ms (10 iteraciones del loop).
+
+---
+
+### 2.7 `APP/src/freertos.c` — hooks de aplicacion
+
+#### Rol
+
+Implementa callbacks que FreeRTOS invoca en momentos clave. Los stubs `__weak` de `Core/Src/freertos.c` quedan **sobreescritos** por estas versiones porque el linker resuelve la de APP.
+
+
+| Hook                            | Cuando se ejecuta                       | Accion en este proyecto                          |
+| ------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| `vApplicationIdleHook`          | Tarea Idle sin nada mas que hacer       | `g_task_idle_cnt++`                              |
+| `vApplicationTickHook`          | Cada tick SysTick (1 ms), **desde ISR** | `g_app_tick_cnt++`                               |
+| `vApplicationStackOverflowHook` | Desborde de pila detectado              | `configASSERT(0)` + `g_app_stack_overflow_cnt++` |
+
+
+#### Restricciones importantes
+
+- **Idle hook:** no debe bloquear (sin `vTaskDelay`, sin `xQueueReceive` con timeout).
+- **Tick hook:** corre en contexto de interrupcion; solo API `...FromISR`; debe ser muy corto (aqui solo incrementa contador).
+- **Stack overflow hook:** entra en critical section y cuelga con assert para depuracion.
+
+Habilitacion en `FreeRTOSConfig.h`:
+
+```c
+#define configUSE_IDLE_HOOK            1
+#define configUSE_TICK_HOOK            1
+#define configCHECK_FOR_STACK_OVERFLOW 1
+```
+
+Los contadores `g_task_idle_cnt` y `g_app_tick_cnt` permiten verificar en depuracion que Idle y tick RTOS estan activos.
+
+---
+
+### 2.8 Interaccion entre archivos — flujo temporal completo
+
+Ejemplo: usuario presiona y mantiene B1, luego suelta.
+
+```text
+t=0 ms     task_btn: lee UP, statechart en ST_BTN_UP
+t=0 ms     task_led: statechart ST_LED_OFF, vTaskDelayUntil 50ms
+
+t=50 ms    task_btn: detecta DOWN → ST_BTN_FALLING, guarda tick
+t=50 ms    task_led: sin evento, sigue OFF
+
+t=100 ms   task_btn: 50ms en FALLING, sigue DOWN
+           → LOGGER "BTN PRESSED"
+           → put_event_task_led(EV_LED_BLINK)
+           → task_led_dta.flag=true, event=BLINK
+           → ST_BTN_DOWN
+
+t=100 ms   task_led: flag+BLINK → LOGGER "LED BLINK"
+           → LED ON, ST_LED_BLINK
+
+t=600 ms   task_led: toggle LED (500ms desde tick)
+t=1100 ms  task_led: segundo toggle
+...
+
+t=???      usuario suelta boton
+           task_btn: ST_BTN_DOWN → ST_BTN_RISING
+
++50 ms     task_btn: LOGGER "BTN HOVER"
+           → put_event_task_led(EV_LED_OFF)
+
++50 ms     task_led: flag+OFF → LOGGER "LED OFF"
+           → GPIO OFF, ST_LED_OFF
+```
+
+Mientras ambas tareas usan `vTaskDelay` / `vTaskDelayUntil`, el scheduler intercala ejecucion con tarea Idle y hooks.
+
+---
+
+### 2.9 APIs FreeRTOS utilizadas en la capa APP
+
+
+| API                      | Archivo                    | Uso                               |
+| ------------------------ | -------------------------- | --------------------------------- |
+| `xQueueCreate`           | `app.c`                    | Crear cola (futuro TP2-02)        |
+| `xSemaphoreCreateBinary` | `app.c`                    | Crear semaforo (futuro TP2-03/04) |
+| `vQueueAddToRegistry`    | `app.c`                    | Registro para debug               |
+| `xTaskCreate`            | `app.c`                    | Crear task_btn y task_led         |
+| `xPortGetFreeHeapSize`   | `app.c`                    | Consulta heap libre               |
+| `xTaskGetTickCount`      | `task_btn.c`, `task_led.c` | Debounce y blink                  |
+| `vTaskDelay`             | `task_btn.c`               | Periodo 50 ms relativo            |
+| `vTaskDelayUntil`        | `task_led.c`               | Periodo 50 ms absoluto            |
+| `pcTaskGetName`          | tareas                     | Logs con nombre de tarea          |
+| Hooks idle/tick/overflow | `APP/freertos.c`           | Observabilidad                    |
+
+
+**No se usan aun:** `xQueueSend`, `xQueueReceive`, `xSemaphoreGive`, `xSemaphoreTake`, APIs `FromISR`.
+
+---
+
+### 2.10 Comparacion con enfoque baremetal
+
+
+| Aspecto      | Baremetal tipico               | Este TP2 (APP)                                                            |
+| ------------ | ------------------------------ | ------------------------------------------------------------------------- |
+| Boton        | ISR + flag o polling en `main` | Polling en **task_btn** cada 50 ms                                        |
+| LED          | Timer ISR o loop con delay     | **task_led** + statechart + `xTaskGetTickCount`                           |
+| Comunicacion | Variable global `volatile`     | `task_led_dta` + flag (sin `volatile` explicito; funciona en demo simple) |
+| Timing       | `HAL_Delay` bloqueante         | `vTaskDelay` / `vTaskDelayUntil` (cede CPU)                               |
+| Depuracion   | Contadores manuales            | Hooks + LOGGER + contadores globales                                      |
+
+
+Ventaja RTOS: boton y LED son modulos separados que corren concurrentemente sin bloquearse mutuamente. Costo: heap, context switches y primitivas preparadas pero aun no usadas.
+
+---
+
+### 2.11 Puntos de verificacion en depuracion (Paso 09 de la guia)
+
+1. Breakpoint en `app_init()` → verificar retorno de `xTaskCreate` y handles no nulos.
+2. Breakpoint en `put_event_task_led()` → watch `task_led_dta.event` y `task_led_dta.flag`.
+3. Breakpoint en `task_btn_statechart()` estados `ST_BTN_FALLING` / `ST_BTN_RISING`.
+4. Breakpoint en `task_led_statechart()` transiciones OFF↔BLINK.
+5. Watch `g_task_btn_cnt`, `g_task_led_cnt` → incrementan periodicamente.
+6. Watch `g_app_tick_cnt` → crece ~1000/s (tick hook).
+7. Watch `g_task_idle_cnt` → crece cuando ambas tareas estan bloqueadas en delay.
+8. UART: secuencia PRESSED → BLINK → HOVER → OFF al operar el boton.
+
+---
+
+*Seccion 2 — Actividad TP2-01, Paso 08. Proyecto: `sotri-tp2_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
