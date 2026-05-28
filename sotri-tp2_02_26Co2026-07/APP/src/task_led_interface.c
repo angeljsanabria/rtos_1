@@ -59,8 +59,9 @@
 /********************** external functions definition ************************/
 void put_event_task_led(task_led_ev_t event)
 {
-	task_led_dta.event = event;
-	task_led_dta.flag = true;
+//	task_led_dta.event = event;
+//	task_led_dta.flag = true;
+	xQueueSend(h_btn_led_q, &event, portMAX_DELAY);
 }
 
 /********************** end of file ******************************************/

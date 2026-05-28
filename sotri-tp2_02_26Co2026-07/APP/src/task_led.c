@@ -95,6 +95,15 @@ void task_led(void *parameters)
 		/* Update Task Counter */
 		g_task_led_cnt++;
 
+		/* Reviso la cola de tareas*/
+
+
+
+		if(xQueueReceive(h_btn_led_q, &task_led_dta.event, pdMS_TO_TICKS(10)) == pdTRUE){
+			task_led_dta.flag = true;
+			LOGGER_INFO("Tarea recibida por queue h_btn_led_q");
+		}
+
 		/* Run Task Statechart */
     	task_led_statechart();
 
