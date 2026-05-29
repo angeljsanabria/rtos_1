@@ -12,14 +12,36 @@ Fue completado. Revisar el repo.
 > Completar cada respuesta segun la experiencia depurando en STM32CubeIDE.
 
 **1. ¿Como crear una Cola?**
+Antes de crear la queue se necesita una variable para retener el  handler o manejador de la queue. El tipo de datos es QueueHandle_t.
+static QueueHandle_t h_btn_led_q = NULL;
+
+Para crearla es con la funcion xQueueCreate()
+	QueueHandle_t xQueueCreate( UBaseType_t uxQueueLength, UBaseType_t uxItemSize );
+Donde el primer valor indica la cantidad maxima de mensajes (numero de elementos) que puede contener la queue, y el segundo el tamaño de esos mensajes (o elementos) en bytes.
+    ej: h_btn_led_q = xQueueCreate(5, sizeof(task_led_ev_t));
+El retorno de la funcion es el handler allocado en memoria, si RTOS no puede allocar el handler la funcion de creacion retorna NULL. 
+La practica recomenda es revisar si el puntero del handler es Null para bloquear en desarrollo el flujo del firmware y detectar errores.
+    ej:
+	h_btn_led_q = xQueueCreate(5, sizeof(task_led_ev_t));
+	configASSERT(NULL != h_btn_led_q);
+
+Si el puntero devuelto por xQueueCreate es distinto a Null, la Cola fue creada correctamente.
 
 ---
 
 **2. ¿Como eliminar una Cola?**
-
+Una Queue se elimina con la funcion de API void vQueueDelete( QueueHandle_t xQueue ). Esta funcion se encarga de liberar la memotira que el Kernel reservó para la estructura interna de la Cola.
+Como parametro va el handler devuelto por xQueueCreate; 
+ej: 
+    (void)vQueueDelete(h_btn_led_q);
+    h_btn_led_q = NULL;
+El retorno es Nulo. Se recomienda como buena practica poner la variable del handler en NULL para evitar usos incorrectos a posterior.
 ---
 
 **3. ¿Como gestiona una Cola los datos que contiene?**
+El kernel de RTOS administra la Cola como un buffer circular del tipo FIFO. 
+La funcion xQueueSend( xQueue, ( void * ) &pxMessage, ( TickType_t ) 0 ); Se encarga de encolar el mensaje o elemento de la Cola y aumenta un contador interno de mensajes pendientes. Si es el primer mensaje enviado va a ser el primer mensaje que se lee segun FIFO.
+Una forma de romper con 
 
 ---
 
@@ -56,7 +78,7 @@ Fue completado. Revisar el repo.
 
 // TODO: ANGEL COMPLETAR; 
 Antes de la modificacion:
-Es que task_btn se comunica con un archivo de "interfaz" para impactar en led seteando evento y flag con void put_event_task_led(task_led_ev_t event); 
+En el sistema anterior task_btn se comunica con un archivo/módulo de "interfaz" para impactar en un led seteando evento y flag con void put_event_task_led(task_led_ev_t event); 
 
 Utilizamos la queue h_btn_led_q para comunicar las tareas.
 Con xQueueSend(h_btn_led_q, &event, portMAX_DELAY) publicamos los eventos de boton presionado y release.
