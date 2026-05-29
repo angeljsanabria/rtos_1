@@ -1,4 +1,4 @@
-#MicroXplorer Configuration settings - do not modify
+﻿#MicroXplorer Configuration settings - do not modify
 CAD.formats=
 CAD.pinconfig=
 CAD.provider=
@@ -183,8 +183,8 @@ ProjectManager.MainLocation=Core/Src
 ProjectManager.NoMain=false
 ProjectManager.PreviousToolchain=
 ProjectManager.ProjectBuild=false
-ProjectManager.ProjectFileName=sotri-tp2_26Co2026-07.ioc
-ProjectManager.ProjectName=sotri-tp2_26Co2026-07
+ProjectManager.ProjectFileName=sotri-tp2_01_26Co2026-07.ioc
+ProjectManager.ProjectName=sotri-tp2_01_26Co2026-07
 ProjectManager.ProjectStructure=
 ProjectManager.RegisterCallBack=
 ProjectManager.StackSize=0x400
@@ -324,3 +324,4 @@ board=NUCLEO-L4R5ZI
 boardIOC=true
 rtos.0.ip=FREERTOS
 isbadioc=false
+

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>sotri-tp2_26Co2026-07</name>
+	<name>sotri-tp2_01_26Co2026-07</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -30,4 +30,5 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
 </projectDescription>
+
 

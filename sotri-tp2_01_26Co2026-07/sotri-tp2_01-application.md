@@ -1,6 +1,6 @@
-# CESE - Sistemas Operativos de Tiempo Real
+﻿# CESE - Sistemas Operativos de Tiempo Real
 
-## Trabajo Practico N°: 2 - Comunicacion de Tareas de FreeRTOS
+## Trabajo Practico NÂ°: 2 - Comunicacion de Tareas de FreeRTOS
 
 > **Nota sobre archivos de la guia:** la consigna original cita `startup_stm32f103rbtx.s`, `stm32f1xx_it.c` (NUCLEO-F103).  
 > Este proyecto del grupo usa **STM32L4R5ZI** (NUCLEO-L4R5ZI). Los archivos equivalentes analizados son:
@@ -18,9 +18,9 @@
 > **Nota sobre TIM1 / TIM2 en la consigna:** el texto de la guia mezcla nombres (*"Timer 1 (TIM2)"*, *"Timer 2 (TIM2)"*).  
 > En **este** firmware la asignacion verificada es:
 >
-> - **SysTick** → tick del kernel **FreeRTOS** (1 ms).
-> - **TIM1** → timebase de la **HAL** (`uwTick`, 1 ms).
-> - **TIM2** → contador de alta frecuencia para **run-time stats** de FreeRTOS (`ulHighFrequencyTimerTicks`).
+> - **SysTick** â†’ tick del kernel **FreeRTOS** (1 ms).
+> - **TIM1** â†’ timebase de la **HAL** (`uwTick`, 1 ms).
+> - **TIM2** â†’ contador de alta frecuencia para **run-time stats** de FreeRTOS (`ulHighFrequencyTimerTicks`).
 
 ---
 
@@ -34,7 +34,7 @@ Es el **vector de interrupciones** y el **punto de entrada** tras reset del Cort
 
 Responsabilidades principales:
 
-1. Tabla `g_pfnVectors`: apunta `_estack`, `Reset_Handler`, handlers de excepciones (NMI, HardFault, …) y de perifericos (TIM1, TIM2, EXTI, …).
+1. Tabla `g_pfnVectors`: apunta `_estack`, `Reset_Handler`, handlers de excepciones (NMI, HardFault, â€¦) y de perifericos (TIM1, TIM2, EXTI, â€¦).
 2. `Reset_Handler`:
   - Configura SP (`_estack`).
   - Llama `SystemInit()` (FPU, VTOR si aplica).
@@ -46,10 +46,10 @@ Responsabilidades principales:
 
 En el vector aparecen entradas relevantes para este TP2:
 
-- `SysTick_Handler` (pos. 15) — usado por FreeRTOS tras `osKernelStart()`.
-- `TIM1_UP_TIM16_IRQHandler` — timebase HAL.
-- `TIM2_IRQHandler` — contador run-time stats.
-- `EXTI15_10_IRQHandler` — boton B1 (PC13).
+- `SysTick_Handler` (pos. 15) â€” usado por FreeRTOS tras `osKernelStart()`.
+- `TIM1_UP_TIM16_IRQHandler` â€” timebase HAL.
+- `TIM2_IRQHandler` â€” contador run-time stats.
+- `EXTI15_10_IRQHandler` â€” boton B1 (PC13).
 
 #### `main.c`
 
@@ -57,23 +57,23 @@ Orquesta la inicializacion **antes** del scheduler:
 
 ```text
 main()
-  ├─ [opcional] initialise_monitor_handles()   (semihosting)
-  ├─ HAL_Init()                                → HAL_InitTick() usa TIM1
-  ├─ SystemClock_Config()                      → PLL, 120 MHz SYSCLK
-  ├─ MX_GPIO_Init()                            → LED, boton EXTI, USB
-  ├─ MX_LPUART1_UART_Init()
-  ├─ MX_USART3_UART_Init()
-  ├─ MX_TIM2_Init()                            → Prescaler=119, Period=99
-  ├─ HAL_TIM_Base_Start_IT(&htim2)             → arranca TIM2 con IRQ
-  ├─ app_init()                                → cola, semaforo, task_btn, task_led
-  └─ osKernelStart()                           → arranca FreeRTOS (no retorna)
-       └─ while(1) {}                          → codigo muerto si scheduler OK
+  â”œâ”€ [opcional] initialise_monitor_handles()   (semihosting)
+  â”œâ”€ HAL_Init()                                â†’ HAL_InitTick() usa TIM1
+  â”œâ”€ SystemClock_Config()                      â†’ PLL, 120 MHz SYSCLK
+  â”œâ”€ MX_GPIO_Init()                            â†’ LED, boton EXTI, USB
+  â”œâ”€ MX_LPUART1_UART_Init()
+  â”œâ”€ MX_USART3_UART_Init()
+  â”œâ”€ MX_TIM2_Init()                            â†’ Prescaler=119, Period=99
+  â”œâ”€ HAL_TIM_Base_Start_IT(&htim2)             â†’ arranca TIM2 con IRQ
+  â”œâ”€ app_init()                                â†’ cola, semaforo, task_btn, task_led
+  â””â”€ osKernelStart()                           â†’ arranca FreeRTOS (no retorna)
+       â””â”€ while(1) {}                          â†’ codigo muerto si scheduler OK
 ```
 
 `HAL_TIM_PeriodElapsedCallback()` discrimina instancia:
 
-- **TIM1** → `HAL_IncTick()` incrementa `uwTick` (HAL, 1 ms).
-- **TIM2** → `ulHighFrequencyTimerTicks++` (stats FreeRTOS).
+- **TIM1** â†’ `HAL_IncTick()` incrementa `uwTick` (HAL, 1 ms).
+- **TIM2** â†’ `ulHighFrequencyTimerTicks++` (stats FreeRTOS).
 
 Funciones auxiliares para stats (`configureTimerForRunTimeStats`, `getRunTimeCounterValue`) estan en `main.c` y se enlazan desde `FreeRTOSConfig.h`.
 
@@ -84,10 +84,10 @@ Capa de **vectores de interrupcion** que delega en HAL:
 
 | Handler                           | Accion                                           |
 | --------------------------------- | ------------------------------------------------ |
-| Excepciones Cortex (HardFault, …) | Loop infinito / depuracion                       |
-| `TIM1_UP_TIM16_IRQHandler`        | `HAL_TIM_IRQHandler(&htim1)` → callback HAL tick |
-| `TIM2_IRQHandler`                 | `HAL_TIM_IRQHandler(&htim2)` → incremento stats  |
-| `EXTI15_10_IRQHandler`            | `HAL_GPIO_EXTI_IRQHandler(B1_Pin)` → `app_it.c`  |
+| Excepciones Cortex (HardFault, â€¦) | Loop infinito / depuracion                       |
+| `TIM1_UP_TIM16_IRQHandler`        | `HAL_TIM_IRQHandler(&htim1)` â†’ callback HAL tick |
+| `TIM2_IRQHandler`                 | `HAL_TIM_IRQHandler(&htim2)` â†’ incremento stats  |
+| `EXTI15_10_IRQHandler`            | `HAL_GPIO_EXTI_IRQHandler(B1_Pin)` â†’ `app_it.c`  |
 
 
 No contiene logica de aplicacion; solo despacha a HAL/callbacks.
@@ -126,13 +126,13 @@ TIM2 alimenta esas macros con resolucion ~100 us (10 kHz).
 Generado por CubeMX. Aporta:
 
 - Stubs `__weak` de hooks y funciones de stats (sobreescritos en `APP/src/freertos.c`).
-- `vApplicationGetIdleTaskMemory()` — **alloc estatica** de la tarea Idle (TCB + stack).
+- `vApplicationGetIdleTaskMemory()` â€” **alloc estatica** de la tarea Idle (TCB + stack).
 
 Las implementaciones reales de hooks estan en `APP/src/freertos.c`:
 
-- `vApplicationIdleHook()` → `g_task_idle_cnt++`
-- `vApplicationTickHook()` → `g_app_tick_cnt++`
-- `vApplicationStackOverflowHook()` → `configASSERT(0)`
+- `vApplicationIdleHook()` â†’ `g_task_idle_cnt++`
+- `vApplicationTickHook()` â†’ `g_app_tick_cnt++`
+- `vApplicationStackOverflowHook()` â†’ `configASSERT(0)`
 
 ---
 
@@ -152,7 +152,7 @@ uint32_t SystemCoreClock = 4000000U;  /* valor inicial tras reset (MSI 4 MHz tip
 | Reset                             | `4000000` (4 MHz, MSI por defecto)                               | `system_stm32l4xx.c` |
 | `SystemInit()` en `Reset_Handler` | Configura FPU; **no** cambia PLL todavia                         | `system_stm32l4xx.c` |
 | `HAL_Init()`                      | Llama `HAL_InitTick()`; usa `SystemCoreClock` vigente            | `main.c`             |
-| `SystemClock_Config()`            | PLL: HSI 16 MHz → PLLM=2, PLLN=30, PLLR=2 → **SYSCLK = 120 MHz** | `main.c`             |
+| `SystemClock_Config()`            | PLL: HSI 16 MHz â†’ PLLM=2, PLLN=30, PLLR=2 â†’ **SYSCLK = 120 MHz** | `main.c`             |
 | Tras `HAL_RCC_ClockConfig()`      | `SystemCoreClock` actualizado automaticamente a **120000000**    | HAL RCC              |
 
 
@@ -163,8 +163,8 @@ VCO_in  = HSI / PLLM = 16 MHz / 2 = 8 MHz
 VCO_out = VCO_in * PLLN = 8 * 30 = 240 MHz
 SYSCLK  = VCO_out / PLLR = 240 / 2 = 120 MHz
 HCLK    = 120 MHz (AHB div 1)
-PCLK1   = 60 MHz (APB1 div 2)  → TIM2 clock efectivo 120 MHz (x2 si APB prescaled)
-PCLK2   = 120 MHz (APB2 div 1) → TIM1 clock 120 MHz
+PCLK1   = 60 MHz (APB1 div 2)  â†’ TIM2 clock efectivo 120 MHz (x2 si APB prescaled)
+PCLK2   = 120 MHz (APB2 div 1) â†’ TIM1 clock 120 MHz
 ```
 
 #### SysTick (periferico Cortex-M)
@@ -175,7 +175,7 @@ PCLK2   = 120 MHz (APB2 div 1) → TIM1 clock 120 MHz
 | Tras reset                                     | No configurado (registros LOAD/VAL/CTRL en estado por defecto)                                                                      |
 | Durante `HAL_Init()`                           | **No** se usa SysTick para HAL tick; CubeMX redirige tick HAL a **TIM1** (`stm32l4xx_hal_timebase_tim.c`)                           |
 | Durante init perifericos                       | SysTick sigue sin rol activo en aplicacion                                                                                          |
-| En `osKernelStart()` → `vTaskStartScheduler()` | Port FreeRTOS **configura SysTick** para interrumpir cada 1 ms (`configTICK_RATE_HZ = 1000`) usando `SystemCoreClock = 120 MHz`     |
+| En `osKernelStart()` â†’ `vTaskStartScheduler()` | Port FreeRTOS **configura SysTick** para interrumpir cada 1 ms (`configTICK_RATE_HZ = 1000`) usando `SystemCoreClock = 120 MHz`     |
 | Tras arranque scheduler                        | `SysTick_Handler` (alias `xPortSysTickHandler`) incrementa tick RTOS; habilita `vTaskDelay`, `vTaskDelayUntil`, `xTaskGetTickCount` |
 
 
@@ -184,10 +184,10 @@ PCLK2   = 120 MHz (APB2 div 1) → TIM1 clock 120 MHz
 **Resumen temporal:**
 
 ```text
-SystemCoreClock:  4 MHz ──SystemClock_Config()──► 120 MHz (permanece)
-uwTick (HAL):       0 ──TIM1 IRQ cada 1 ms──────► 0, 1, 2, 3 …
-SysTick (RTOS):   inactivo ──osKernelStart()──► tick 0, 1, 2 … (1 ms)
-ulHighFrequencyTimerTicks: 0 ──TIM2 IRQ ~100 us──► contador rapido
+SystemCoreClock:  4 MHz â”€â”€SystemClock_Config()â”€â”€â–º 120 MHz (permanece)
+uwTick (HAL):       0 â”€â”€TIM1 IRQ cada 1 msâ”€â”€â”€â”€â”€â”€â–º 0, 1, 2, 3 â€¦
+SysTick (RTOS):   inactivo â”€â”€osKernelStart()â”€â”€â–º tick 0, 1, 2 â€¦ (1 ms)
+ulHighFrequencyTimerTicks: 0 â”€â”€TIM2 IRQ ~100 usâ”€â”€â–º contador rapido
 ```
 
 ---
@@ -198,43 +198,43 @@ Secuencia detallada (sin scheduler aun):
 
 ```text
 1. Reset hardware
-   └─ CPU carga SP desde vector[0] y PC desde vector[1] = Reset_Handler
+   â””â”€ CPU carga SP desde vector[0] y PC desde vector[1] = Reset_Handler
 
 2. Reset_Handler (startup_stm32l4r5zitx.s)
-   ├─ sp = _estack
-   ├─ SystemInit()           → FPU, VTOR
-   ├─ Copia .data Flash→RAM
-   ├─ Limpia .bss = 0
-   ├─ __libc_init_array()
-   └─ main()
+   â”œâ”€ sp = _estack
+   â”œâ”€ SystemInit()           â†’ FPU, VTOR
+   â”œâ”€ Copia .data Flashâ†’RAM
+   â”œâ”€ Limpia .bss = 0
+   â”œâ”€ __libc_init_array()
+   â””â”€ main()
 
-3. main() — fase bare-metal (aun no hay tareas RTOS)
-   ├─ initialise_monitor_handles()  [si semihosting]
-   ├─ HAL_Init()
-   │    └─ HAL_InitTick() → configura TIM1 @ 1 ms, NVIC TIM1_UP_TIM16
-   ├─ SystemClock_Config()
-   │    └─ SystemCoreClock = 120 MHz; HAL_InitTick() reconfigura TIM1
-   ├─ MX_GPIO_Init()        → LEDs, B1 como EXTI falling, prioridad IRQ 5
-   ├─ MX_LPUART1 / MX_USART3
-   ├─ MX_TIM2_Init()        → timer base 10 kHz (stats)
-   ├─ HAL_TIM_Base_Start_IT(&htim2)
-   │    └─ empiezan IRQ de TIM2 (ulHighFrequencyTimerTicks++)
-   └─ app_init()
-        ├─ Inicializa contadores globales (g_app_cnt, …)
-        ├─ xQueueCreate(5, sizeof(task_led_ev_t))
-        ├─ xSemaphoreCreateBinary()
-        ├─ xTaskCreate(task_btn, … prio 1)
-        ├─ xTaskCreate(task_led, … prio 1)
-        ├─ app_it_init()
-        └─ cycle_counter_init()
+3. main() â€” fase bare-metal (aun no hay tareas RTOS)
+   â”œâ”€ initialise_monitor_handles()  [si semihosting]
+   â”œâ”€ HAL_Init()
+   â”‚    â””â”€ HAL_InitTick() â†’ configura TIM1 @ 1 ms, NVIC TIM1_UP_TIM16
+   â”œâ”€ SystemClock_Config()
+   â”‚    â””â”€ SystemCoreClock = 120 MHz; HAL_InitTick() reconfigura TIM1
+   â”œâ”€ MX_GPIO_Init()        â†’ LEDs, B1 como EXTI falling, prioridad IRQ 5
+   â”œâ”€ MX_LPUART1 / MX_USART3
+   â”œâ”€ MX_TIM2_Init()        â†’ timer base 10 kHz (stats)
+   â”œâ”€ HAL_TIM_Base_Start_IT(&htim2)
+   â”‚    â””â”€ empiezan IRQ de TIM2 (ulHighFrequencyTimerTicks++)
+   â””â”€ app_init()
+        â”œâ”€ Inicializa contadores globales (g_app_cnt, â€¦)
+        â”œâ”€ xQueueCreate(5, sizeof(task_led_ev_t))
+        â”œâ”€ xSemaphoreCreateBinary()
+        â”œâ”€ xTaskCreate(task_btn, â€¦ prio 1)
+        â”œâ”€ xTaskCreate(task_led, â€¦ prio 1)
+        â”œâ”€ app_it_init()
+        â””â”€ cycle_counter_init()
 
 4. osKernelStart()
-   ├─ Crea tarea Idle (memoria estatica en Core/freertos.c)
-   ├─ Configura SysTick para tick 1 ms
-   ├─ Arranca primera tarea lista (task_btn o task_led segun scheduler)
-   └─ NO RETORNA a main()
+   â”œâ”€ Crea tarea Idle (memoria estatica en Core/freertos.c)
+   â”œâ”€ Configura SysTick para tick 1 ms
+   â”œâ”€ Arranca primera tarea lista (task_btn o task_led segun scheduler)
+   â””â”€ NO RETORNA a main()
 
-5. while(1) en main → NO se alcanza en operacion normal
+5. while(1) en main â†’ NO se alcanza en operacion normal
 ```
 
 **Comportamiento observable antes del `while(1)`:**
@@ -256,28 +256,28 @@ La consigna mezcla numeracion; esta tabla refleja el **proyecto real**:
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | **SysTick** | El port Cortex-M configura SysTick al iniciar scheduler. Cada IRQ ejecuta el tick handler del kernel (`xPortSysTickHandler`).                                           | **Tick RTOS 1 ms**: `vTaskDelay`, `vTaskDelayUntil`, timeouts de colas/semaforos, `xTaskGetTickCount`, `vApplicationTickHook`  |
 | **TIM1**    | **No** es tick de FreeRTOS. Convive en paralelo. FreeRTOS puede suspender/reanudar tick HAL con `HAL_SuspendTick`/`HAL_ResumeTick` en context switches (segun port ST). | **Timebase HAL** (`uwTick`): delays HAL, timeouts HAL. Libera SysTick para el kernel                                           |
-| **TIM2**    | Con `configGENERATE_RUN_TIME_STATS = 1`, el kernel lee `getRunTimeCounterValue()` → `ulHighFrequencyTimerTicks`                                                         | **Run-time stats**: medir % CPU por tarea (Tracealyzer, `vTaskGetRunTimeStats`, debug). Resolucion ~100 us vs 1 ms del SysTick |
+| **TIM2**    | Con `configGENERATE_RUN_TIME_STATS = 1`, el kernel lee `getRunTimeCounterValue()` â†’ `ulHighFrequencyTimerTicks`                                                         | **Run-time stats**: medir % CPU por tarea (Tracealyzer, `vTaskGetRunTimeStats`, debug). Resolucion ~100 us vs 1 ms del SysTick |
 
 
-Cadena TIM2 → FreeRTOS stats:
+Cadena TIM2 â†’ FreeRTOS stats:
 
 ```text
 TIM2 IRQ (10 kHz)
-  → TIM2_IRQHandler()
-  → HAL_TIM_IRQHandler(&htim2)
-  → HAL_TIM_PeriodElapsedCallback(TIM2)
-  → ulHighFrequencyTimerTicks++
-  → portGET_RUN_TIME_COUNTER_VALUE (en context switch / stats API)
+  â†’ TIM2_IRQHandler()
+  â†’ HAL_TIM_IRQHandler(&htim2)
+  â†’ HAL_TIM_PeriodElapsedCallback(TIM2)
+  â†’ ulHighFrequencyTimerTicks++
+  â†’ portGET_RUN_TIME_COUNTER_VALUE (en context switch / stats API)
 ```
 
-Cadena SysTick → FreeRTOS:
+Cadena SysTick â†’ FreeRTOS:
 
 ```text
 SysTick IRQ (1 kHz)
-  → SysTick_Handler / xPortSysTickHandler
-  → xTaskIncrementTick()
-  → vApplicationTickHook()  [g_app_tick_cnt++ en APP/freertos.c]
-  → posible cambio de contexto (PendSV)
+  â†’ SysTick_Handler / xPortSysTickHandler
+  â†’ xTaskIncrementTick()
+  â†’ vApplicationTickHook()  [g_app_tick_cnt++ en APP/freertos.c]
+  â†’ posible cambio de contexto (PendSV)
 ```
 
 **Comparacion baremetal:** en un proyecto sin RTOS, SysTick suele servir para `HAL_IncTick()` y nada mas. Aqui **SysTick queda reservado al kernel** y la HAL usa **TIM1**, evitando competir por el mismo timer.
@@ -291,25 +291,25 @@ TIM2 se usa **a traves de la HAL**, pero **no** como reloj principal de la HAL (
 #### Configuracion (`MX_TIM2_Init` en `main.c`)
 
 ```c
-htim2.Init.Prescaler = 119;   /* div 120 → 1 MHz contador si TIMclk = 120 MHz */
-htim2.Init.Period    = 99;    /* overflow cada 100 cuentas → 10 kHz */
+htim2.Init.Prescaler = 119;   /* div 120 â†’ 1 MHz contador si TIMclk = 120 MHz */
+htim2.Init.Period    = 99;    /* overflow cada 100 cuentas â†’ 10 kHz */
 ```
 
 Frecuencia de update (con TIM2 clock = 120 MHz):
 
 ```text
-f_TIM2 = 120 MHz / (119+1) / (99+1) = 10 kHz  →  periodo 100 us
+f_TIM2 = 120 MHz / (119+1) / (99+1) = 10 kHz  â†’  periodo 100 us
 ```
 
 #### Cadena HAL
 
 ```text
 main: HAL_TIM_Base_Start_IT(&htim2)
-  → HAL habilita IRQ TIM2
+  â†’ HAL habilita IRQ TIM2
 stm32l4xx_it.c: TIM2_IRQHandler()
-  → HAL_TIM_IRQHandler(&htim2)
+  â†’ HAL_TIM_IRQHandler(&htim2)
 main.c: HAL_TIM_PeriodElapsedCallback()  [if TIM2]
-  → ulHighFrequencyTimerTicks++
+  â†’ ulHighFrequencyTimerTicks++
 ```
 
 #### Proposito respecto a la HAL
@@ -328,9 +328,9 @@ TIM2 demuestra el patron HAL de **timer base en modo interrupcion**: el hardware
 **Importante:** TIM2 **no** reemplaza a SysTick ni a TIM1. Los tres coexisten:
 
 ```text
-TIM1  → 1 ms   → HAL
-SysTick → 1 ms → FreeRTOS kernel
-TIM2  → 100 us → estadisticas CPU (FreeRTOS)
+TIM1  â†’ 1 ms   â†’ HAL
+SysTick â†’ 1 ms â†’ FreeRTOS kernel
+TIM2  â†’ 100 us â†’ estadisticas CPU (FreeRTOS)
 ```
 
 ---
@@ -344,11 +344,11 @@ flowchart TD
     DATA --> LIBC[__libc_init_array]
     LIBC --> M[main]
 
-    M --> HAL[HAL_Init → TIM1 1ms HAL tick]
-    HAL --> CLK[SystemClock_Config → 120 MHz]
+    M --> HAL[HAL_Init â†’ TIM1 1ms HAL tick]
+    HAL --> CLK[SystemClock_Config â†’ 120 MHz]
     CLK --> PER[MX_GPIO / UART / TIM2]
     PER --> T2[HAL_TIM_Base_Start_IT TIM2]
-    T2 --> APP[app_init → tareas + cola + sem]
+    T2 --> APP[app_init â†’ tareas + cola + sem]
     APP --> OS[osKernelStart]
     OS --> SYST[Configura SysTick 1ms RTOS]
     SYST --> RUN[Tareas Task BTN / Task LED]
@@ -365,16 +365,16 @@ flowchart TD
 Para confirmar este analisis en STM32CubeIDE:
 
 1. Breakpoint en `Reset_Handler` y single-step hasta `main`.
-2. Watch `SystemCoreClock` antes y despues de `SystemClock_Config()` → debe pasar a `120000000`.
-3. Breakpoint en `TIM1_UP_TIM16_IRQHandler` → `uwTick` incrementa cada ~1 ms.
-4. Breakpoint en `TIM2_IRQHandler` → `ulHighFrequencyTimerTicks` incrementa ~ cada 100 us.
-5. Breakpoint en `osKernelStart()` → al continuar, el flujo **no** vuelve a `while(1)`.
-6. Breakpoint en `SysTick_Handler` tras scheduler → tick RTOS activo.
+2. Watch `SystemCoreClock` antes y despues de `SystemClock_Config()` â†’ debe pasar a `120000000`.
+3. Breakpoint en `TIM1_UP_TIM16_IRQHandler` â†’ `uwTick` incrementa cada ~1 ms.
+4. Breakpoint en `TIM2_IRQHandler` â†’ `ulHighFrequencyTimerTicks` incrementa ~ cada 100 us.
+5. Breakpoint en `osKernelStart()` â†’ al continuar, el flujo **no** vuelve a `while(1)`.
+6. Breakpoint en `SysTick_Handler` tras scheduler â†’ tick RTOS activo.
 7. Vista FreeRTOS/tasks: `Task BTN`, `Task LED`, `IDLE` presentes.
 
 ---
 
-*Seccion 1 — Actividad TP2-01, Paso 06. Proyecto: `sotri-tp2_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
+*Seccion 1 â€” Actividad TP2-01, Paso 06. Proyecto: `sotri-tp2_01_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
 
 ---
 
@@ -426,21 +426,21 @@ El demo implementa un **Event-Triggered System** con dos tareas FreeRTOS de igua
 
 | Accion usuario                     | Evento generado | Efecto en LED                          |
 | ---------------------------------- | --------------- | -------------------------------------- |
-| Boton libre                        | —               | LED apagado (`ST_LED_OFF`)             |
-| Boton presionado estable (≥ 50 ms) | `EV_LED_BLINK`  | Entra en parpadeo (toggle cada 500 ms) |
-| Boton soltado estable (≥ 50 ms)    | `EV_LED_OFF`    | LED apagado                            |
+| Boton libre                        | â€”               | LED apagado (`ST_LED_OFF`)             |
+| Boton presionado estable (â‰¥ 50 ms) | `EV_LED_BLINK`  | Entra en parpadeo (toggle cada 500 ms) |
+| Boton soltado estable (â‰¥ 50 ms)    | `EV_LED_OFF`    | LED apagado                            |
 
 
 Secuencia tipica en UART:
 
 ```text
-Task BTN - BTN PRESSED  →  Task LED - LED BLINK
-Task BTN - BTN HOVER    →  Task LED - LED OFF
+Task BTN - BTN PRESSED  â†’  Task LED - LED BLINK
+Task BTN - BTN HOVER    â†’  Task LED - LED OFF
 ```
 
 ---
 
-### 2.2 `app.c` — inicializacion de la aplicacion
+### 2.2 `app.c` â€” inicializacion de la aplicacion
 
 #### Rol
 
@@ -451,9 +451,9 @@ Punto de entrada de la capa APP. Es llamado desde `main()` **antes** de `osKerne
 
 | Variable                         | Tipo                | Proposito                                                     |
 | -------------------------------- | ------------------- | ------------------------------------------------------------- |
-| `g_app_cnt`, `g_app_task_cnt`, … | `uint32_t`          | Contadores de observabilidad / debug                          |
-| `h_btn_led_q`                    | `QueueHandle_t`     | Cola BTN→LED (5 x `task_led_ev_t`) — **creada, no usada aun** |
-| `h_btn_led_bin_sem`              | `SemaphoreHandle_t` | Semaforo binario — **creado, no usado aun**                   |
+| `g_app_cnt`, `g_app_task_cnt`, â€¦ | `uint32_t`          | Contadores de observabilidad / debug                          |
+| `h_btn_led_q`                    | `QueueHandle_t`     | Cola BTNâ†’LED (5 x `task_led_ev_t`) â€” **creada, no usada aun** |
+| `h_btn_led_bin_sem`              | `SemaphoreHandle_t` | Semaforo binario â€” **creado, no usado aun**                   |
 | `h_task_btn`, `h_task_led`       | `TaskHandle_t`      | Handles para depuracion o borrado futuro                      |
 
 
@@ -461,17 +461,17 @@ Punto de entrada de la capa APP. Es llamado desde `main()` **antes** de `osKerne
 
 ```text
 app_init()
-  ├─ Inicializa contadores globales a 0
-  ├─ LOGGER_INFO: banner ETS / TP2
-  ├─ xQueueCreate(5, sizeof(task_led_ev_t))  → h_btn_led_q
-  ├─ vQueueAddToRegistry(...)                  → debug/trace
-  ├─ xSemaphoreCreateBinary()                → h_btn_led_bin_sem
-  ├─ vQueueAddToRegistry(...)
-  ├─ xTaskCreate(task_btn, "Task BTN", prio 1, &h_task_btn)
-  ├─ xTaskCreate(task_led, "Task LED", prio 1, &h_task_led)
-  ├─ xPortGetFreeHeapSize()                  → heap restante
-  ├─ app_it_init()
-  └─ cycle_counter_init()                    → DWT para mediciones
+  â”œâ”€ Inicializa contadores globales a 0
+  â”œâ”€ LOGGER_INFO: banner ETS / TP2
+  â”œâ”€ xQueueCreate(5, sizeof(task_led_ev_t))  â†’ h_btn_led_q
+  â”œâ”€ vQueueAddToRegistry(...)                  â†’ debug/trace
+  â”œâ”€ xSemaphoreCreateBinary()                â†’ h_btn_led_bin_sem
+  â”œâ”€ vQueueAddToRegistry(...)
+  â”œâ”€ xTaskCreate(task_btn, "Task BTN", prio 1, &h_task_btn)
+  â”œâ”€ xTaskCreate(task_led, "Task LED", prio 1, &h_task_led)
+  â”œâ”€ xPortGetFreeHeapSize()                  â†’ heap restante
+  â”œâ”€ app_it_init()
+  â””â”€ cycle_counter_init()                    â†’ DWT para mediciones
 ```
 
 #### Parametros de creacion de tareas
@@ -494,7 +494,7 @@ La cola y el semaforo estan **preparados** para TP2-02 (cola) y TP2-03/04 (semaf
 
 ---
 
-### 2.3 `app_it.c` — interrupciones de aplicacion
+### 2.3 `app_it.c` â€” interrupciones de aplicacion
 
 #### Rol
 
@@ -514,7 +514,7 @@ Bloque placeholder: deshabilita y rehabilita interrupciones sin configuracion ad
 Invocado desde la cadena:
 
 ```text
-EXTI15_10_IRQHandler → HAL_GPIO_EXTI_IRQHandler(B1_Pin) → HAL_GPIO_EXTI_Callback
+EXTI15_10_IRQHandler â†’ HAL_GPIO_EXTI_IRQHandler(B1_Pin) â†’ HAL_GPIO_EXTI_Callback
 ```
 
 Estado actual:
@@ -530,7 +530,7 @@ if (GPIO_Pin == BTN_A_PIN)  /* BTN_A_PIN == B1_Pin en NUCLEO_L4R5ZI */
 
 ---
 
-### 2.4 `task_btn.c` — tarea productora del boton
+### 2.4 `task_btn.c` â€” tarea productora del boton
 
 #### Rol
 
@@ -551,7 +551,7 @@ for (;;)
 {
     g_task_btn_cnt++;
     task_btn_statechart();
-    vTaskDelay(BTN_TICK_DEL_MAX);   /* 50 ms — delay relativo */
+    vTaskDelay(BTN_TICK_DEL_MAX);   /* 50 ms â€” delay relativo */
 }
 ```
 
@@ -563,10 +563,10 @@ Usa `**vTaskDelay**` (relativo): la tarea cede CPU al scheduler durante 50 ms.
 stateDiagram-v2
     [*] --> ST_BTN_UP
     ST_BTN_UP --> ST_BTN_FALLING : EV_BTN_DOWN
-    ST_BTN_FALLING --> ST_BTN_DOWN : 50ms y sigue DOWN\n→ put_event(BLINK)
+    ST_BTN_FALLING --> ST_BTN_DOWN : 50ms y sigue DOWN\nâ†’ put_event(BLINK)
     ST_BTN_FALLING --> ST_BTN_UP : 50ms y volvio UP
     ST_BTN_DOWN --> ST_BTN_RISING : EV_BTN_UP
-    ST_BTN_RISING --> ST_BTN_UP : 50ms y sigue UP\n→ put_event(OFF)
+    ST_BTN_RISING --> ST_BTN_UP : 50ms y sigue UP\nâ†’ put_event(OFF)
     ST_BTN_RISING --> ST_BTN_DOWN : 50ms y volvio DOWN
 ```
 
@@ -576,9 +576,9 @@ stateDiagram-v2
 | Estado           | Accion clave                                                       |
 | ---------------- | ------------------------------------------------------------------ |
 | `ST_BTN_UP`      | Espera flanco a presionado                                         |
-| `ST_BTN_FALLING` | Espera 50 ms (`DEL_BTN_MAX`); si sigue presionado → `EV_LED_BLINK` |
+| `ST_BTN_FALLING` | Espera 50 ms (`DEL_BTN_MAX`); si sigue presionado â†’ `EV_LED_BLINK` |
 | `ST_BTN_DOWN`    | Espera flanco a liberado                                           |
-| `ST_BTN_RISING`  | Espera 50 ms; si sigue libre → `EV_LED_OFF` (log "BTN HOVER")      |
+| `ST_BTN_RISING`  | Espera 50 ms; si sigue libre â†’ `EV_LED_OFF` (log "BTN HOVER")      |
 
 
 #### Lectura del boton
@@ -598,11 +598,11 @@ Llama `put_event_task_led(EV_LED_BLINK)` o `put_event_task_led(EV_LED_OFF)`. **N
 
 ---
 
-### 2.5 `task_led_interface.c` — interfaz de comunicacion entre tareas
+### 2.5 `task_led_interface.c` â€” interfaz de comunicacion entre tareas
 
 #### Rol
 
-Abstrae el mecanismo BTN → LED. En TP2-01 es el unico punto por donde `task_btn` escribe eventos para `task_led`.
+Abstrae el mecanismo BTN â†’ LED. En TP2-01 es el unico punto por donde `task_btn` escribe eventos para `task_led`.
 
 #### Implementacion
 
@@ -629,7 +629,7 @@ typedef enum task_led_st { ST_LED_OFF, ST_LED_BLINK } task_led_st_t;
 
 ---
 
-### 2.6 `task_led.c` — tarea consumidora del LED
+### 2.6 `task_led.c` â€” tarea consumidora del LED
 
 #### Rol
 
@@ -672,8 +672,8 @@ stateDiagram-v2
 
 | Estado         | Comportamiento                                                                              |
 | -------------- | ------------------------------------------------------------------------------------------- |
-| `ST_LED_OFF`   | Si `flag==true` y `event==EV_LED_BLINK` → enciende LED, pasa a BLINK, limpia flag           |
-| `ST_LED_BLINK` | Si llega `EV_LED_OFF` → apaga y vuelve a OFF; si no, toggle cada **500 ms** (`DEL_LED_MAX`) |
+| `ST_LED_OFF`   | Si `flag==true` y `event==EV_LED_BLINK` â†’ enciende LED, pasa a BLINK, limpia flag           |
+| `ST_LED_BLINK` | Si llega `EV_LED_OFF` â†’ apaga y vuelve a OFF; si no, toggle cada **500 ms** (`DEL_LED_MAX`) |
 | `default`      | Recuperacion: fuerza OFF                                                                    |
 
 
@@ -693,7 +693,7 @@ La tarea corre cada 50 ms pero el toggle ocurre cada 500 ms (10 iteraciones del 
 
 ---
 
-### 2.7 `APP/src/freertos.c` — hooks de aplicacion
+### 2.7 `APP/src/freertos.c` â€” hooks de aplicacion
 
 #### Rol
 
@@ -725,7 +725,7 @@ Los contadores `g_task_idle_cnt` y `g_app_tick_cnt` permiten verificar en depura
 
 ---
 
-### 2.8 Interaccion entre archivos — flujo temporal completo
+### 2.8 Interaccion entre archivos â€” flujo temporal completo
 
 Ejemplo: usuario presiona y mantiene B1, luego suelta.
 
@@ -733,30 +733,30 @@ Ejemplo: usuario presiona y mantiene B1, luego suelta.
 t=0 ms     task_btn: lee UP, statechart en ST_BTN_UP
 t=0 ms     task_led: statechart ST_LED_OFF, vTaskDelayUntil 50ms
 
-t=50 ms    task_btn: detecta DOWN → ST_BTN_FALLING, guarda tick
+t=50 ms    task_btn: detecta DOWN â†’ ST_BTN_FALLING, guarda tick
 t=50 ms    task_led: sin evento, sigue OFF
 
 t=100 ms   task_btn: 50ms en FALLING, sigue DOWN
-           → LOGGER "BTN PRESSED"
-           → put_event_task_led(EV_LED_BLINK)
-           → task_led_dta.flag=true, event=BLINK
-           → ST_BTN_DOWN
+           â†’ LOGGER "BTN PRESSED"
+           â†’ put_event_task_led(EV_LED_BLINK)
+           â†’ task_led_dta.flag=true, event=BLINK
+           â†’ ST_BTN_DOWN
 
-t=100 ms   task_led: flag+BLINK → LOGGER "LED BLINK"
-           → LED ON, ST_LED_BLINK
+t=100 ms   task_led: flag+BLINK â†’ LOGGER "LED BLINK"
+           â†’ LED ON, ST_LED_BLINK
 
 t=600 ms   task_led: toggle LED (500ms desde tick)
 t=1100 ms  task_led: segundo toggle
 ...
 
 t=???      usuario suelta boton
-           task_btn: ST_BTN_DOWN → ST_BTN_RISING
+           task_btn: ST_BTN_DOWN â†’ ST_BTN_RISING
 
 +50 ms     task_btn: LOGGER "BTN HOVER"
-           → put_event_task_led(EV_LED_OFF)
+           â†’ put_event_task_led(EV_LED_OFF)
 
-+50 ms     task_led: flag+OFF → LOGGER "LED OFF"
-           → GPIO OFF, ST_LED_OFF
++50 ms     task_led: flag+OFF â†’ LOGGER "LED OFF"
+           â†’ GPIO OFF, ST_LED_OFF
 ```
 
 Mientras ambas tareas usan `vTaskDelay` / `vTaskDelayUntil`, el scheduler intercala ejecucion con tarea Idle y hooks.
@@ -802,15 +802,15 @@ Ventaja RTOS: boton y LED son modulos separados que corren concurrentemente sin 
 
 ### 2.11 Puntos de verificacion en depuracion (Paso 09 de la guia)
 
-1. Breakpoint en `app_init()` → verificar retorno de `xTaskCreate` y handles no nulos.
-2. Breakpoint en `put_event_task_led()` → watch `task_led_dta.event` y `task_led_dta.flag`.
+1. Breakpoint en `app_init()` â†’ verificar retorno de `xTaskCreate` y handles no nulos.
+2. Breakpoint en `put_event_task_led()` â†’ watch `task_led_dta.event` y `task_led_dta.flag`.
 3. Breakpoint en `task_btn_statechart()` estados `ST_BTN_FALLING` / `ST_BTN_RISING`.
-4. Breakpoint en `task_led_statechart()` transiciones OFF↔BLINK.
-5. Watch `g_task_btn_cnt`, `g_task_led_cnt` → incrementan periodicamente.
-6. Watch `g_app_tick_cnt` → crece ~1000/s (tick hook).
-7. Watch `g_task_idle_cnt` → crece cuando ambas tareas estan bloqueadas en delay.
-8. UART: secuencia PRESSED → BLINK → HOVER → OFF al operar el boton.
+4. Breakpoint en `task_led_statechart()` transiciones OFFâ†”BLINK.
+5. Watch `g_task_btn_cnt`, `g_task_led_cnt` â†’ incrementan periodicamente.
+6. Watch `g_app_tick_cnt` â†’ crece ~1000/s (tick hook).
+7. Watch `g_task_idle_cnt` â†’ crece cuando ambas tareas estan bloqueadas en delay.
+8. UART: secuencia PRESSED â†’ BLINK â†’ HOVER â†’ OFF al operar el boton.
 
 ---
 
-*Seccion 2 — Actividad TP2-01, Paso 08. Proyecto: `sotri-tp2_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
+*Seccion 2 â€” Actividad TP2-01, Paso 08. Proyecto: `sotri-tp2_01_26Co2026-07`. Placa: NUCLEO-L4R5ZI.*
