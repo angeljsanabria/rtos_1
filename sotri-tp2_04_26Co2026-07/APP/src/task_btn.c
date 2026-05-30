@@ -103,14 +103,19 @@ void task_btn(void *parameters)
 void task_btn_statechart(void)
 {
 	/* Get Events to excite Task */
-	if (BTN_PRESSED == HAL_GPIO_ReadPin(task_btn_dta.gpio_port, task_btn_dta.pin))
-	{
-		task_btn_dta.event = EV_BTN_DOWN;
+	if(xSemaphoreTake(h_btn_bin_sem, pdMS_TO_TICKS(50)) == pdPASS){
+		LOGGER_INFO("Tarea recibida por semaforo binario h_btn_led_bin_sem");
+		if (BTN_PRESSED == HAL_GPIO_ReadPin(task_btn_dta.gpio_port, task_btn_dta.pin))
+		{
+			task_btn_dta.event = EV_BTN_DOWN;
+		}
+		else
+		{
+			task_btn_dta.event = EV_BTN_UP;
+		}
 	}
-	else
-	{
-		task_btn_dta.event = EV_BTN_UP;
-	}
+
+
 
 	/* Run to Completion Statechart */
 	switch (task_btn_dta.state)

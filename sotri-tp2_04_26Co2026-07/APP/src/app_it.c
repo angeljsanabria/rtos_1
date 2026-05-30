@@ -42,6 +42,9 @@
 
 /* Application & Tasks includes */
 #include "board.h"
+#include "cmsis_os.h"
+#include "app.h"
+
 
 /********************** macros and definitions *******************************/
 
@@ -71,9 +74,12 @@ void app_it_init(void)
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	// Check which version of the gpio triggered this callback
 	if (GPIO_Pin == BTN_A_PIN)
 	{
+		xSemaphoreGiveFromISR(h_btn_bin_sem, &xHigherPriorityTaskWoken);
+		portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 		/* Work to be done. */
 	}
 }

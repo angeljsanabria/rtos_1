@@ -1,4 +1,4 @@
-﻿#MicroXplorer Configuration settings - do not modify
+#MicroXplorer Configuration settings - do not modify
 CAD.formats=
 CAD.pinconfig=
 CAD.provider=
@@ -122,7 +122,7 @@ PB7.Locked=true
 PB7.Signal=GPIO_Output
 PC13.GPIOParameters=GPIO_Label,GPIO_ModeDefaultEXTI
 PC13.GPIO_Label=B1 [Blue PushButton]
-PC13.GPIO_ModeDefaultEXTI=GPIO_MODE_IT_FALLING
+PC13.GPIO_ModeDefaultEXTI=GPIO_MODE_IT_RISING_FALLING
 PC13.Locked=true
 PC13.Signal=GPXTI13
 PC14-OSC32_IN\ (PC14).Locked=true
@@ -324,5 +324,3 @@ board=NUCLEO-L4R5ZI
 boardIOC=true
 rtos.0.ip=FREERTOS
 isbadioc=false
-
-

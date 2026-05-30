@@ -78,6 +78,7 @@ QueueHandle_t h_btn_led_q;
  * This is used to reference the semaphore that is used to synchronize a thread
  * with other thread or to ensure mutual exclusive access to...*/
 SemaphoreHandle_t h_btn_led_bin_sem;
+SemaphoreHandle_t h_btn_bin_sem;
 
 /* Declare a variable of type TaskHandle_t. This is used to reference threads. */
 TaskHandle_t h_task_btn;
@@ -120,6 +121,10 @@ void app_init(void)
 	h_btn_led_bin_sem = xSemaphoreCreateBinary();
 	configASSERT(NULL != h_btn_led_bin_sem);
 	vQueueAddToRegistry(h_btn_led_bin_sem, "BTN to LED Binary Semaphore Handle");
+
+	h_btn_bin_sem = xSemaphoreCreateBinary();
+	configASSERT(NULL != h_btn_bin_sem);
+	vQueueAddToRegistry(h_btn_bin_sem, "BTN Binary Semaphore Handle");
 
 	/* Add threads, ... */
     BaseType_t ret;

@@ -61,6 +61,7 @@ extern QueueHandle_t h_btn_led_q;
  * This is used to reference the semaphore that is used to synchronize a thread
  * with other thread or to ensure mutual exclusive access to...*/
 extern SemaphoreHandle_t h_btn_led_bin_sem;
+extern SemaphoreHandle_t h_btn_bin_sem;
 
 /* Declare a variable of type TaskHandle_t. This is used to reference threads. */
 extern TaskHandle_t h_task_btn;
