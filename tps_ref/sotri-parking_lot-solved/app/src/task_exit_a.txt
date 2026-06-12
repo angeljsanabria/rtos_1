@@ -1,0 +1,56 @@
+/* Task Exit A Flag */
+bool task_exit_a_flag;
+
+	task_exit_a_flag = false;
+
+const char *p_task_exit_a_wait_exit_a		= "   ==> Task  Exit A - Wait:   Exit A";
+const char *p_task_exit_a_signal_continue	= "   ==> Task  Exit A - Signal: Continue ==>";
+
+const char *p_task_exit_a_wait_mutex		= "   ==> Task  Exit A - Wait:   Mutex";
+const char *p_task_exit_a_signal_mutex		= "   ==> Task  Exit A - Signal: Mutex    ==>";
+
+const char *p_task_exit_a_g_tasks_cnt		= "   <=> Task  Exit A - g_tasks_cnt :";
+
+    /* Reset Task Exit A Flag */
+    task_exit_a_flag = false;
+
+	xSemaphoreTake(h_exit_bin_sem, (portTickType) 0);
+
+		/* Print out: Wait Exit */
+		LOGGER_INFO(p_task_exit_a_wait_exit_b);
+		xSemaphoreTake(h_exit_bin_sem, portMAX_DELAY);
+
+		/* Print out: Signal Continue */
+		LOGGER_INFO(p_task_entry_a_signal_continue_b);
+		xSemaphoreGive(h_continue_bin_sem);
+
+		/* Print out: Wait Mutex */
+		LOGGER_INFO(p_task_exit_a_wait_mutex);
+		xSemaphoreTake(h_mutex_mut_sem, portMAX_DELAY);
+
+		/* Print out: Signal Mutex */
+		LOGGER_INFO(p_task_exit_a_signal_mutex);
+		xSemaphoreGive(h_mutex_mut_sem);
+
+		/* Update Task Entry A & Exit A Counter */
+		g_tasks_cnt--;
+
+		/* Print out: Task Entry A & Exit A Counter*/
+		LOGGER_INFO("  %s %d", p_task_exit_a_g_tasks_cnt, (int)g_tasks_cnt);
+
+		/* Check Tasks Counter and Set Task Exit A Flag */
+		if ((G_TASKS_CNT_MAX - 1) == g_tasks_cnt)
+		{
+			/* Set Task Exit A Flag */
+			task_exit_a_flag = true;
+		}
+
+		/* Check Task Exit A Flag, Reset Task Exit A Flag and Do it here */
+		if (true == task_exit_a_flag)
+		{
+			/* Reset Task Exit A Flag */
+			task_exit_a_flag = false;
+
+			/* Do it here */
+
+		}

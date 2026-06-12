@@ -1,0 +1,24 @@
+const char *p_task_entry_b_wait_entry_b	= "   ==> Task Entry B - Wait:   Entry_B";
+const char *p_task_entry_b_wait_exit_b	= "   ==> Task Entry B - Wait:   Exit_B";
+
+const char *p_task_entry_b_wait_mutex	= "   ==> Task Entry B - Wait:   Mutex";
+const char *p_task_entry_b_signal_mutex	= "   ==> Task Entry B - Signal: Mutex    ==>";
+
+	xSemaphoreTake(h_entry_b_bin_sem, (portTickType) 0);
+	xSemaphoreTake(h_exit_b_bin_sem, (portTickType) 0);
+
+		/* Print out: Wait Entry B */
+		LOGGER_INFO(p_task_entry_b_wait_entry_b);
+		xSemaphoreTake(h_entry_b_bin_sem, portMAX_DELAY);
+
+		/* Print out: Wait Exit B */
+		LOGGER_INFO(p_task_entry_b_wait_exit_b);
+		xSemaphoreTake(h_exit_b_bin_sem, portMAX_DELAY);
+
+		/* Print out: Wait Mutex */
+		LOGGER_INFO(p_task_entry_b_wait_mutex);
+		xSemaphoreTake(h_mutex_mut_sem, portMAX_DELAY);
+
+		/* Print out: Signal Mutex */
+		LOGGER_INFO(p_task_entry_b_signal_mutex);
+		xSemaphoreGive(h_mutex_mut_sem);

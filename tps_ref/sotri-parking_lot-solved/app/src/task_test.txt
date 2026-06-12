@@ -1,0 +1,10 @@
+const char *p_task_test_signal_entry_a		= "  <=> Task Test - Signal: Entry_A  <=>";
+const char *p_task_test_signal_exit_a		= "  <=> Task Test - Signal: Exit_A   <=>";
+
+		/* Print out: Signal Entry A */
+		LOGGER_INFO(p_task_test_signal_entry_a);
+		xSemaphoreGive(h_entry_a_bin_sem);
+
+		/* Print out: Signal Exit A */
+		LOGGER_INFO(p_task_test_signal_exit_a);
+		xSemaphoreGive(h_exit_a_bin_sem);

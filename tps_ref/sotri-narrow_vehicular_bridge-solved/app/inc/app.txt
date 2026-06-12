@@ -1,0 +1,10 @@
+/* Declare a variable of type SemaphoreHandle_t (binary or counting) or mutex. 
+ * This is used to reference the semaphore that is used to synchronize a thread
+ * with other thread or to ensure mutual exclusive access to...*/
+extern SemaphoreHandle_t h_entry_a_bin_sem;
+extern SemaphoreHandle_t h_exit_a_bin_sem;
+
+extern SemaphoreHandle_t h_entry_b_bin_sem_h;
+extern SemaphoreHandle_t h_exit_b_bin_sem_h;
+
+extern SemaphoreHandle_t mutex_mut_sem_h;
